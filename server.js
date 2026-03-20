@@ -62,7 +62,7 @@ app.get("/generate-price-list", async (req, res) => {
 
     const page = await browser.newPage();
 
-    await page.goto("http://localhost:8080/pricelist.html", {
+    await page.goto("https://abs-crackers-world-26.onrender.com/pricelist.html", {
       waitUntil: "domcontentloaded",
     });
 
