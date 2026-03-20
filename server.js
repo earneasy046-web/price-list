@@ -1,28 +1,36 @@
 const express = require("express");
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-core");
 
 const app = express();
 
-app.get("/generate-catalog", async (req, res) => {
-  try {
-    const browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+async function launchBrowser() {
+  return await puppeteer.launch({
+    executablePath: "/usr/bin/chromium", // 🔥 CRITICAL FIX
+    headless: "new",
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage", // prevents memory crashes
+      "--disable-gpu"
+    ],
+  });
+}
 
+app.get("/generate-catalog", async (req, res) => {
+  let browser;
+  try {
+    browser = await launchBrowser();
     const page = await browser.newPage();
 
     await page.goto("https://abs-crackers-world-26.onrender.com/catalog.html", {
-      waitUntil: "domcontentloaded",
+      waitUntil: "networkidle2", // 🔥 better than domcontentloaded
     });
 
-    // wait for products
     await page.waitForSelector(".product-card", { timeout: 60000 });
 
-    // wait for all images
+    // wait for images
     await page.evaluate(async () => {
       const images = Array.from(document.images);
-
       await Promise.all(
         images.map((img) => {
           if (img.complete) return;
@@ -30,7 +38,7 @@ app.get("/generate-catalog", async (req, res) => {
             img.onload = resolve;
             img.onerror = resolve;
           });
-        }),
+        })
       );
     });
 
@@ -39,8 +47,6 @@ app.get("/generate-catalog", async (req, res) => {
       printBackground: true,
     });
 
-    await browser.close();
-
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": "attachment; filename=ABS_Retail_Catalog_2026.pdf",
@@ -48,22 +54,21 @@ app.get("/generate-catalog", async (req, res) => {
 
     res.send(pdf);
   } catch (error) {
-    console.error(error);
-    res.status(500).send("PDF generation failed");
+    console.error("CATALOG ERROR:", error);
+    res.status(500).send(error.toString());
+  } finally {
+    if (browser) await browser.close();
   }
 });
 
 app.get("/generate-price-list", async (req, res) => {
+  let browser;
   try {
-    const browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
+    browser = await launchBrowser();
     const page = await browser.newPage();
 
     await page.goto("https://abs-crackers-world-26.onrender.com/pricelist.html", {
-      waitUntil: "domcontentloaded",
+      waitUntil: "networkidle2",
     });
 
     await page.waitForSelector("table", { timeout: 60000 });
@@ -73,8 +78,6 @@ app.get("/generate-price-list", async (req, res) => {
       printBackground: true,
     });
 
-    await browser.close();
-
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition":
@@ -83,8 +86,10 @@ app.get("/generate-price-list", async (req, res) => {
 
     res.send(pdf);
   } catch (error) {
-    console.error(error);
-    res.status(500).send("Price list generation failed");
+    console.error("PRICE LIST ERROR:", error);
+    res.status(500).send(error.toString());
+  } finally {
+    if (browser) await browser.close();
   }
 });
 
