@@ -1,18 +1,16 @@
 const express = require("express");
-const puppeteer = require("puppeteer"); // ✅ NOT puppeteer-core
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium");
 
 const app = express();
 
-// ✅ centralized browser launcher
+// 🔥 FINAL browser launcher (stable everywhere)
 async function launchBrowser() {
   return await puppeteer.launch({
-    headless: "new",
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu"
-    ],
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
   });
 }
 
