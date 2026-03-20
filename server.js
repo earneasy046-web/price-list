@@ -1,30 +1,32 @@
 const express = require("express");
-const puppeteer = require("puppeteer-core");
+const puppeteer = require("puppeteer"); // ✅ NOT puppeteer-core
 
 const app = express();
 
+// ✅ centralized browser launcher
 async function launchBrowser() {
   return await puppeteer.launch({
-    executablePath: "/usr/bin/chromium", // 🔥 CRITICAL FIX
     headless: "new",
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage", // prevents memory crashes
+      "--disable-dev-shm-usage",
       "--disable-gpu"
     ],
   });
 }
 
+// ================= CATALOG =================
 app.get("/generate-catalog", async (req, res) => {
   let browser;
   try {
     browser = await launchBrowser();
     const page = await browser.newPage();
 
-    await page.goto("https://abs-crackers-world-26.onrender.com/catalog.html", {
-      waitUntil: "networkidle2", // 🔥 better than domcontentloaded
-    });
+    await page.goto(
+      "https://abs-crackers-world-26.onrender.com/catalog.html",
+      { waitUntil: "networkidle2" }
+    );
 
     await page.waitForSelector(".product-card", { timeout: 60000 });
 
@@ -49,7 +51,8 @@ app.get("/generate-catalog", async (req, res) => {
 
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": "attachment; filename=ABS_Retail_Catalog_2026.pdf",
+      "Content-Disposition":
+        "attachment; filename=ABS_Retail_Catalog_2026.pdf",
     });
 
     res.send(pdf);
@@ -61,15 +64,17 @@ app.get("/generate-catalog", async (req, res) => {
   }
 });
 
+// ================= PRICE LIST =================
 app.get("/generate-price-list", async (req, res) => {
   let browser;
   try {
     browser = await launchBrowser();
     const page = await browser.newPage();
 
-    await page.goto("https://abs-crackers-world-26.onrender.com/pricelist.html", {
-      waitUntil: "networkidle2",
-    });
+    await page.goto(
+      "https://abs-crackers-world-26.onrender.com/pricelist.html",
+      { waitUntil: "networkidle2" }
+    );
 
     await page.waitForSelector("table", { timeout: 60000 });
 
@@ -93,6 +98,7 @@ app.get("/generate-price-list", async (req, res) => {
   }
 });
 
+// ================= SERVER =================
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
